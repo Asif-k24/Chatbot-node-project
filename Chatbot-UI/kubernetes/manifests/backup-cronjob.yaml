@@ -1,0 +1,34 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: db-backup
+  namespace: spring-app
+spec:
+  schedule: "0 22 * * *"  # 10 PM daily
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+            image: mysql:8.0
+            command:
+            - /bin/sh
+            - -c
+            - |
+              mysqldump -h mysql-service -u root -p${MYSQL_ROOT_PASSWORD} springdb | gzip > /backup/backup_$(date +%Y%m%d_%H%M%S).sql.gz
+              # Upload to S3 or storage
+            volumeMounts:
+            - name: backup-volume
+              mountPath: /backup
+            env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: root-password
+          restartPolicy: OnFailure
+          volumes:
+          - name: backup-volume
+            persistentVolumeClaim:
+              claimName: backup-pvc
