@@ -1,0 +1,21 @@
+---
+- name: Setup Kubernetes Cluster
+  hosts: all
+  become: yes
+  tasks:
+    - name: Disable swap
+      command: swapoff -a
+      
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+        
+    - name: Install Kubernetes packages
+      apt:
+        name:
+          - kubelet
+          - kubeadm
+          - kubectl
+        state: present
+        update_cache: yes
