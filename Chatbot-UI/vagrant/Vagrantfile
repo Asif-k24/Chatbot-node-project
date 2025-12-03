@@ -1,0 +1,59 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  # Base box
+  config.vm.box = "ubuntu/jammy64"
+  config.vm.box_version = "20231020.0.0"
+  
+  # Disable automatic box update checking
+  config.vm.box_check_update = false
+  
+  # Configure VM provider
+  config.vm.provider "virtualbox" do |vb|
+    vb.memory = "2048"
+    vb.cpus = 2
+  end
+  
+  # Master node for Kubernetes
+  config.vm.define "master" do |master|
+    master.vm.hostname = "master-node"
+    master.vm.network "private_network", ip: "192.168.56.10"
+    master.vm.provider "virtualbox" do |vb|
+      vb.memory = "4096"
+      vb.cpus = 2
+    end
+  end
+  
+  # Worker nodes
+  (1..2).each do |i|
+    config.vm.define "worker#{i}" do |worker|
+      worker.vm.hostname = "worker-node-#{i}"
+      worker.vm.network "private_network", ip: "192.168.56.#{10 + i}"
+      worker.vm.provider "virtualbox" do |vb|
+        vb.memory = "2048"
+        vb.cpus = 2
+      end
+    end
+  end
+  
+  # Jenkins/CI node
+  config.vm.define "jenkins" do |jenkins|
+    jenkins.vm.hostname = "jenkins-server"
+    jenkins.vm.network "private_network", ip: "192.168.56.20"
+    jenkins.vm.provider "virtualbox" do |vb|
+      vb.memory = "4096"
+      vb.cpus = 2
+    end
+  end
+  
+  # Monitoring node
+  config.vm.define "monitoring" do |monitoring|
+    monitoring.vm.hostname = "monitoring-server"
+    monitoring.vm.network "private_network", ip: "192.168.56.30"
+    monitoring.vm.provider "virtualbox" do |vb|
+      vb.memory = "4096"
+      vb.cpus = 2
+    end
+  end
+end
