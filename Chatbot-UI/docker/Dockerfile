@@ -1,19 +1,16 @@
-# Build stage
-FROM maven:3.8.4-openjdk-11-slim AS build
+# Use official Node.js LTS image
+FROM node:20
+# Set working directory
 WORKDIR /app
-COPY pom.xml .
-RUN mvn dependency:go-offline
-COPY src ./src
-RUN mvn clean package -DskipTests
-
-# Runtime stage
-FROM openjdk:11-jre-slim
-WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
-
-# Create non-root user
-RUN useradd -m -u 1000 springuser
-USER springuser
-
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Copy package.json and package-lock.json
+COPY package*.json ./
+# Install dependencies
+RUN npm install --legacy-peer-deps
+# Copy app source code
+COPY . .
+# Build the app
+RUN npm run build
+# Expose port 3000
+EXPOSE 3000
+# Start the app
+CMD ["npm", "start"]
