@@ -7,10 +7,51 @@ data:
   prometheus.yml: |
     global:
       scrape_interval: 15s
+      evaluation_interval: 15s
+    
     scrape_configs:
+    # Monitor Kubernetes nodes
     - job_name: 'kubernetes-nodes'
       kubernetes_sd_configs:
       - role: node
-    - job_name: 'spring-app'
+      relabel_configs:
+      - source_labels: [__address__]
+        regex: '(.*):10250'
+        replacement: '${1}:9100'
+        target_label: __address__
+    
+    # Monitor your Node.js application
+    - job_name: 'node-app'
+      kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - chatbot-app  # Your app namespace
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        action: keep
+        regex: node-app
+      - source_labels: [__meta_kubernetes_pod_container_port_number]
+        action: keep
+        regex: 3000
+      - source_labels: [__meta_kubernetes_pod_ip]
+        target_label: __address__
+        regex: (.+)
+        replacement: '${1}:3000'
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+    
+    # Alternative: Simple static config
+    # - job_name: 'node-app'
+    #   static_configs:
+    #   - targets: ['node-app-service.chatbot-app.svc.cluster.local:3000']
+    #     labels:
+    #       service: 'node-app'
+    #       namespace: 'chatbot-app'
+    
+    # Monitor Prometheus itself
+    - job_name: 'prometheus'
       static_configs:
-      - targets: ['spring-app-service.spring-app.svc.cluster.local:8080']
+      - targets: ['localhost:9090']

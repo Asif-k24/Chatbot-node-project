@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
-        DOCKER_IMAGE = 'your-dockerhub-username/node-app'  // Change this to your actual DockerHub username
+        DOCKER_IMAGE = 'asif0098'  // Change to your actual username
         KUBECONFIG_FILE = credentials('kubeconfig')
     }
 
@@ -34,7 +34,8 @@ pipeline {
         stage('Docker Build') {
             steps {
                 script {
-                    docker.build("${DOCKER_IMAGE}:${env.BUILD_NUMBER}")
+                    // Build Docker image
+                    sh "docker build -t ${DOCKER_IMAGE}:${env.BUILD_NUMBER} ."
                 }
             }
         }
@@ -64,24 +65,20 @@ pipeline {
                     writeFile file: 'kubeconfig.yaml', text: "${KUBECONFIG_FILE}"
                     
                     sh '''
-                        # Apply namespace first
+                        # Apply namespace
                         kubectl --kubeconfig=kubeconfig.yaml apply -f kubernetes/manifests/namespace.yaml
                         
-                        # Wait for namespace to be created
-                        sleep 5
+                        # Wait for namespace
+                        sleep 3
                         
-                        # Apply other resources
-                        kubectl --kubeconfig=kubeconfig.yaml apply -f kubernetes/manifests/secrets.yaml
-                        kubectl --kubeconfig=kubeconfig.yaml apply -f kubernetes/manifests/configmap.yaml
-                        kubectl --kubeconfig=kubeconfig.yaml apply -f kubernetes/manifests/deployment.yaml
-                        kubectl --kubeconfig=kubeconfig.yaml apply -f kubernetes/manifests/service.yaml
-                        kubectl --kubeconfig=kubeconfig.yaml apply -f kubernetes/manifests/ingress.yaml
+                        # Apply all manifests
+                        kubectl --kubeconfig=kubeconfig.yaml apply -f kubernetes/manifests/ -R
                         
-                        # Update deployment image
-                        kubectl --kubeconfig=kubeconfig.yaml set image deployment/node-app -n chatbot-app node-app=${DOCKER_IMAGE}:${BUILD_NUMBER} || true
+                        # Update deployment with new image
+                        kubectl --kubeconfig=kubeconfig.yaml set image deployment/node-app node-app=${DOCKER_IMAGE}:${BUILD_NUMBER} -n chatbot-app
                         
-                        # Rollout restart to ensure new image is used
-                        kubectl --kubeconfig=kubeconfig.yaml rollout restart deployment/node-app -n chatbot-app
+                        # Wait for rollout
+                        kubectl --kubeconfig=kubeconfig.yaml rollout status deployment/node-app -n chatbot-app --timeout=180s
                     '''
                 }
             }
@@ -91,17 +88,14 @@ pipeline {
             steps {
                 script {
                     sh '''
-                        echo "Waiting for the pod to start..."
-                        # Wait for rollout to complete
-                        kubectl --kubeconfig=kubeconfig.yaml rollout status deployment/node-app -n chatbot-app --timeout=120s
+                        echo "Performing smoke test..."
+                        # Get pod name
+                        POD_NAME=$(kubectl --kubeconfig=kubeconfig.yaml get pods -n chatbot-app -l app=node-app -o jsonpath="{.items[0].metadata.name}")
                         
-                        # Get service URL for testing
-                        # If you're using a LoadBalancer or have external IP
-                        # SERVICE_URL=$(kubectl --kubeconfig=kubeconfig.yaml get svc node-app-service -n chatbot-app -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-                        # curl -f http://${SERVICE_URL}:3000 || exit 1
+                        # Check if pod is running
+                        kubectl --kubeconfig=kubeconfig.yaml exec -n chatbot-app $POD_NAME -- curl -s http://localhost:3000/health || echo "Health check failed"
                         
-                        # Alternative: Use port-forward for testing
-                        echo "Smoke test passed - deployment is ready"
+                        echo "Smoke test completed"
                     '''
                 }
             }
@@ -112,10 +106,11 @@ pipeline {
         always {
             echo 'Cleaning up...'
             script {
-                // Clean up Docker images locally to save space
+                // Clean up Docker images
                 sh '''
                     docker rmi ${DOCKER_IMAGE}:${BUILD_NUMBER} || true
                     docker rmi ${DOCKER_IMAGE}:latest || true
+                    rm -f kubeconfig.yaml || true
                 '''
                 // Clean workspace
                 cleanWs()

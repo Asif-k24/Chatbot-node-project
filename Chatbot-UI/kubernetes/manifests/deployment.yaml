@@ -1,59 +1,53 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: spring-app
-  namespace: spring-app
+  name: node-app
+  namespace: chatbot-app
+  labels:
+    app: node-app
 spec:
-  replicas: 5
+  replicas: 3
   selector:
     matchLabels:
-      app: spring-app
+      app: node-app
   template:
     metadata:
       labels:
-        app: spring-app
+        app: node-app
+      annotations:
+        prometheus.io/scrape: "true"           # Enable scraping
+        prometheus.io/port: "3000"             # Port to scrape
+        prometheus.io/path: "/metrics"         # Metrics endpoint
     spec:
       containers:
-      - name: spring-app
-        image: your-dockerhub-username/spring-app:latest
+      - name: node-app
+        image: asif0098/node-app:latest  # Will be updated by Jenkins
         imagePullPolicy: Always
         ports:
-        - containerPort: 8080
-        envFrom:
-        - configMapRef:
-            name: spring-app-config
-        - secretRef:
-            name: spring-app-secrets
+        - containerPort: 3000
+          name: http
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3000"
         resources:
           requests:
-            memory: "512Mi"
+            memory: "256Mi"
             cpu: "250m"
           limits:
-            memory: "1Gi"
+            memory: "512Mi"
             cpu: "500m"
         livenessProbe:
           httpGet:
-            path: /actuator/health
-            port: 8080
-          initialDelaySeconds: 60
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
           periodSeconds: 10
         readinessProbe:
           httpGet:
-            path: /actuator/health/readiness
-            port: 8080
-          initialDelaySeconds: 30
+            path: /health
+            port: 3000
+          initialDelaySeconds: 10
           periodSeconds: 5
----
-apiVersion: autoscaling/v1
-kind: HorizontalPodAutoscaler
-metadata:
-  name: spring-app-hpa
-  namespace: spring-app
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: spring-app
-  minReplicas: 5
-  maxReplicas: 10
-  targetCPUUtilizationPercentage: 70
