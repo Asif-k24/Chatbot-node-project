@@ -15,16 +15,22 @@ pipeline {
             }
         }
 
-        stage('Install Dependencies') {
-            steps {
-		dir('Chatbot-UI') {
-                    sh '''
-			echo "Current directory: $(pwd)"
-                        ls -la
-                    '''
-		}
+	stage('Install Dependencies') {
+	    environment {
+                PATH = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
             }
+    steps {
+        dir('Chatbot-UI') {
+            sh '''
+                echo "Using Node: $(which node)"
+                echo "Node version: $(node -v)"
+                echo "NPM version: $(npm -v)"
+                npm install
+            '''
         }
+    }
+}
+
 
         stage('Build Node App') {
             steps {
@@ -66,6 +72,13 @@ pipeline {
                         """
 		    }
                 }
+            }
+        }
+
+	stage('Deploy') {
+            steps {
+                sh 'docker-compose down'
+                sh 'docker-compose up -d'
             }
         }
 
