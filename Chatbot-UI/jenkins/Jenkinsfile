@@ -12,14 +12,13 @@ pipeline {
         stage('Checkout') {
             steps {
                 git branch: 'staging',
-                    url: 'https://github.com/your-username/Spring_Java_project.git'
+                    url: 'https://github.com/Asif-k24/Chatbot-node-project.git'
             }
         }
 
         stage('Install Dependencies') {
             steps {
                 sh '''
-                    cd docker/..
                     npm install --legacy-peer-deps
                 '''
             }
@@ -28,7 +27,6 @@ pipeline {
         stage('Build Node App') {
             steps {
                 sh '''
-                    cd docker/..
                     npm run build
                 '''
             }
@@ -60,7 +58,6 @@ pipeline {
                     kubectl apply -f kubernetes/manifests/secrets.yaml
                     kubectl apply -f kubernetes/manifests/configmap.yaml
 
-                    # Update deployment with latest image tag
                     kubectl set image deployment/node-app node-app=${DOCKER_IMAGE}:${BUILD_NUMBER}
 
                     kubectl apply -f kubernetes/manifests/deployment.yaml
@@ -75,7 +72,6 @@ pipeline {
                 sh '''
                     echo "Waiting for the pod to start..."
                     sleep 20
-
                     curl -f http://localhost:3000 || exit 1
                 '''
             }
@@ -91,7 +87,9 @@ pipeline {
         }
         always {
             echo 'Cleaning workspace...'
-            cleanWs()
+            script {
+                cleanWs()   // FIXED
+            }
         }
     }
 }
