@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
         DOCKER_IMAGE = 'asif0098/node-app'  // Fixed: Added repository name
-        KUBECONFIG_FILE = credentials('kubeconfig')
+        // KUBECONFIG_FILE = credentials('kubeconfig')
     }
 
     stages {
