@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
-        DOCKER_IMAGE = 'asif0098/node-app'  // Fixed: Added repository name
+        DOCKER_IMAGE = 'asif0098/chatbot-ui'  // Fixed: Added repository name
         // KUBECONFIG_FILE = credentials('kubeconfig')
     }
 
@@ -17,25 +17,34 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                sh '''
-                    npm install --legacy-peer-deps
-                '''
+		dir('Chatbot-UI') {
+                    sh '''
+			echo "Current directory: $(pwd)"
+                        ls -la
+                        npm install --legacy-peer-deps
+                    '''
+		}
             }
         }
 
         stage('Build Node App') {
             steps {
-                sh '''
-                    npm run build
-                '''
+		dir('Chatbot-UI') {
+                    sh '''
+                        npm run build
+                    '''
+		}
             }
         }
 
         stage('Docker Build') {
             steps {
                 script {
-                    sh "docker build -t ${DOCKER_IMAGE}:${env.BUILD_NUMBER} ."
-                }
+		// Build from Chatbot-UI directory where Dockerfile is located
+                    dir('Chatbot-UI') {
+                        sh "docker build -t ${DOCKER_IMAGE}:${env.BUILD_NUMBER} ."
+                    }
+		}
             }
         }
 
@@ -50,15 +59,15 @@ pipeline {
                     )]) {
                         sh """
                             echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
+                        
+                            // Push with build number tag
+                            docker push ${DOCKER_IMAGE}:${env.BUILD_NUMBER}
+
+                            // Tag as latest and push
+                            docker tag ${DOCKER_IMAGE}:${env.BUILD_NUMBER} ${DOCKER_IMAGE}:latest
+                            docker push ${DOCKER_IMAGE}:latest
                         """
-                        
-                        // Push with build number tag
-                        sh "docker push ${DOCKER_IMAGE}:${env.BUILD_NUMBER}"
-                        
-                        // Tag as latest and push
-                        sh "docker tag ${DOCKER_IMAGE}:${env.BUILD_NUMBER} ${DOCKER_IMAGE}:latest"
-                        sh "docker push ${DOCKER_IMAGE}:latest"
-                    }
+		    }
                 }
             }
         }
