@@ -21,7 +21,7 @@ pipeline {
                     sh '''
 			echo "Current directory: $(pwd)"
                         ls -la
-                        npm ci
+                        npm install
                     '''
 		}
             }
