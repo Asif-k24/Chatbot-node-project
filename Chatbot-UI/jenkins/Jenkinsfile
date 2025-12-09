@@ -21,7 +21,7 @@ pipeline {
                     sh '''
 			echo "Current directory: $(pwd)"
                         ls -la
-                        npm install --legacy-peer-deps
+                        npm ci
                     '''
 		}
             }
