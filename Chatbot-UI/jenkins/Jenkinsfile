@@ -3,11 +3,11 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
-        DOCKER_IMAGE = 'asif0098/chatbot-ui'  // Fixed: Added repository name
-        // KUBECONFIG_FILE = credentials('kubeconfig')
+        DOCKER_IMAGE = 'asif0098/chatbot-ui'
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 git branch: 'staging',
@@ -15,46 +15,43 @@ pipeline {
             }
         }
 
-	stage('Install Dependencies') {
-	    environment {
+        stage('Install Dependencies') {
+            environment {
                 PATH = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
             }
-    steps {
-        dir('Chatbot-UI') {
-            sh '''
-                echo "Using Node: $(which node)"
-                echo "Node version: $(node -v)"
-                echo "NPM version: $(npm -v)"
-                npm install
-            '''
+            steps {
+                dir('Chatbot-UI') {
+                    sh '''
+                        echo "Using Node: $(which node)"
+                        echo "Node version: $(node -v)"
+                        echo "NPM version: $(npm -v)"
+                        npm install
+                    '''
+                }
+            }
         }
-    }
-}
-
 
         stage('Build Node App') {
             steps {
-		dir('Chatbot-UI') {
+                dir('Chatbot-UI') {
                     sh '''
                         npm run build
                     '''
-		}
+                }
             }
         }
 
         stage('Docker Build') {
             steps {
                 script {
-		    // Build from Chatbot-UI directory where Dockerfile is located
-		    sh "docker build -t ${DOCKER_IMAGE}:${env.BUILD_NUMBER} -f Chatbot-UI/docker/Dockerfile Chatbot-UI"
-		}
+                    sh "docker build -t ${DOCKER_IMAGE}:${env.BUILD_NUMBER} -f Chatbot-UI/docker/Dockerfile Chatbot-UI"
+                }
             }
         }
 
         stage('Docker Login & Push') {
             steps {
                 script {
-                    // Login to DockerHub
                     withCredentials([usernamePassword(
                         credentialsId: 'dockerhub-credentials',
                         usernameVariable: 'DOCKER_USER',
@@ -62,89 +59,31 @@ pipeline {
                     )]) {
                         sh """
                             echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
-                        
-                            // Push with build number tag
+
                             docker push ${DOCKER_IMAGE}:${env.BUILD_NUMBER}
 
-                            // Tag as latest and push
                             docker tag ${DOCKER_IMAGE}:${env.BUILD_NUMBER} ${DOCKER_IMAGE}:latest
                             docker push ${DOCKER_IMAGE}:latest
                         """
-		    }
+                    }
                 }
             }
         }
 
-	stage('Deploy') {
+        stage('Deploy') {
             steps {
                 sh 'docker-compose down'
                 sh 'docker-compose up -d'
             }
         }
 
-	// Comment out kubernetes stagers for now
-        /*
-	stage('Deploy to Kubernetes') {
-            steps {
-                script {
-                    // Use kubeconfig from credentials
-                    withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
-                        sh '''
-                            # Set KUBECONFIG environment variable
-                            export KUBECONFIG=${KUBECONFIG}
-                            
-                            # Apply namespace
-                            kubectl apply -f kubernetes/manifests/namespace.yaml
-                            
-                            # Wait for namespace
-                            sleep 3
-                            
-                            # Apply all manifests
-                            kubectl apply -f kubernetes/manifests/ -R
-                            
-                            # Update deployment with new image
-                            kubectl set image deployment/node-app node-app=${DOCKER_IMAGE}:${BUILD_NUMBER} -n chatbot-app
-                            
-                            # Wait for rollout
-                            kubectl rollout status deployment/node-app -n chatbot-app --timeout=180s
-                        '''
-                    }
-                }
-            }
-        }
-
-        stage('Smoke Test') {
-            steps {
-                script {
-                    withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
-                        sh '''
-                            export KUBECONFIG=${KUBECONFIG}
-                            
-                            echo "Performing smoke test..."
-                            
-                            # Wait a bit for pod to be ready
-                            sleep 10
-                            
-                            # Get pod name
-                            POD_NAME=$(kubectl get pods -n chatbot-app -l app=node-app -o jsonpath="{.items[0].metadata.name}")
-                            
-                            # Check if pod is running
-                            kubectl exec -n chatbot-app $POD_NAME -- curl -s http://localhost:3000/health || echo "Health check failed"
-                            
-                            echo "Smoke test completed"
-                        '''
-                    }
-                }
-            }
-        }
-	*/
+        // Kubernetes stages commented
     }
 
     post {
         always {
             echo 'Cleaning up...'
             script {
-                // Clean up Docker images
                 sh '''
                     docker rmi ${DOCKER_IMAGE}:${BUILD_NUMBER} || true
                     docker rmi ${DOCKER_IMAGE}:latest || true
