@@ -40,10 +40,8 @@ pipeline {
         stage('Docker Build') {
             steps {
                 script {
-		// Build from Chatbot-UI directory where Dockerfile is located
-                    dir('Chatbot-UI') {
-                        sh "docker build -t ${DOCKER_IMAGE}:${env.BUILD_NUMBER} ."
-                    }
+		    // Build from Chatbot-UI directory where Dockerfile is located
+		    sh "docker build -t ${DOCKER_IMAGE}:${env.BUILD_NUMBER} -f Chatbot-UI/docker/Dockerfile Chatbot-UI"
 		}
             }
         }

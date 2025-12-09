@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: node-app-service
+  name: chatbot-ui-service
   namespace: chatbot-app
 spec:
   selector:
-    app: node-app
+    app: chatbot-ui
   ports:
   - port: 80
     targetPort: 3000

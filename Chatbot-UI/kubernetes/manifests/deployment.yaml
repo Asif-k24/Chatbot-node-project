@@ -1,27 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: node-app
+  name: chatbot-ui
   namespace: chatbot-app
   labels:
-    app: node-app
+    app: chatbot-ui
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: node-app
+      app: chatbot-ui
   template:
     metadata:
       labels:
-        app: node-app
+        app: chatbot-ui
       annotations:
         prometheus.io/scrape: "true"           # Enable scraping
         prometheus.io/port: "3000"             # Port to scrape
         prometheus.io/path: "/metrics"         # Metrics endpoint
     spec:
       containers:
-      - name: node-app
-        image: asif0098/node-app:latest  # Will be updated by Jenkins
+      - name: chatbot-ui
+        image: asif0098/chatbot-ui:latest  # Will be updated by Jenkins
         imagePullPolicy: Always
         ports:
         - containerPort: 3000
