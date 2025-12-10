@@ -26,7 +26,7 @@
     "react-markdown": "^8.0.5",
     "react-syntax-highlighter": "^15.5.0",
     "rehype-mathjax": "^4.0.2",
-    "remark-gfm": "^13.0.0",
+    "remark-gfm": "^3.0.0",
     "remark-math": "^5.1.1",
     "uuid": "^9.0.0"
   },
