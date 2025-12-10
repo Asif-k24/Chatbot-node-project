@@ -14,6 +14,7 @@ pipeline {
             }
         }
 
+	/*
         stage('Build Node App') {
             steps {
                 dir('Chatbot-UI') {
@@ -25,6 +26,7 @@ pipeline {
                 }
             }
         }
+	*/
 
         stage('Docker Build') {
             steps {
