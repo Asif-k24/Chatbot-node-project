@@ -15,6 +15,34 @@ pipeline {
         }
 
 	/*
+	stage('Clean & Fix Permissions') {
+            steps {
+                dir('Chatbot-UI') {
+                    sh '''
+                        # Completely remove node_modules to avoid permission issues
+                        echo "Cleaning up workspace..."
+                        rm -rf node_modules package-lock.json .next 2>/dev/null || true
+                        
+                        # Fix any permission issues
+                        find . -type d -exec chmod 755 {} \; 2>/dev/null || true
+                        find . -type f -exec chmod 644 {} \; 2>/dev/null || true
+                    '''
+                }
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                dir('Chatbot-UI') {
+                    sh '''
+                        # Install with clean cache
+                        npm cache clean --force 2>/dev/null || true
+                        npm install --legacy-peer-deps --no-audit --no-fund
+                    '''
+                }
+            }
+        }
+
         stage('Build Node App') {
             steps {
                 dir('Chatbot-UI') {
