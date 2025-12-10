@@ -4,6 +4,7 @@ pipeline {
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
         DOCKER_IMAGE = 'asif0098/chatbot-ui'
+	DOCKER_TAG = "${env.BUILD_NUMBER}"
     }
 
     stages {
@@ -20,23 +21,31 @@ pipeline {
                 PATH = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
             }
             steps {
-                dir('Chatbot-UI') {
-                    sh '''
-                        echo "Using Node: $(which node)"
-                        echo "Node version: $(node -v)"
-                        echo "NPM version: $(npm -v)"
-                        npm install
-                    '''
+		dir('Chatbot-UI') {
+		    nodejs(nodeJSInstallationName: 'node20') {
+                        sh '''
+                            # Increase npm fetch retries
+                            npm set fetch-retries 5
+                            npm set fetch-retry-mintimeout 20000
+                            npm set fetch-retry-maxtimeout 120000
+
+                            # Clean old node_modules and lock file
+                            rm -rf node_modules package-lock.json
+
+                            # Install dependencies
+                            npm install --legacy-peer-deps
+                        '''
+                    }
                 }
             }
-        }
+	}
 
         stage('Build Node App') {
             steps {
                 dir('Chatbot-UI') {
-                    sh '''
-                        npm run build
-                    '''
+		    nodejs(nodeJSInstallationName: 'node20') {
+                        sh 'npm run build'
+                    }
                 }
             }
         }
@@ -44,8 +53,8 @@ pipeline {
         stage('Docker Build') {
             steps {
                 script {
-                    sh "docker build -t ${DOCKER_IMAGE}:${env.BUILD_NUMBER} -f Chatbot-UI/docker/Dockerfile Chatbot-UI"
-                }
+		    docker.build("${DOCKER_IMAGE}:${DOCKER_TAG}", "Chatbot-UI/docker")
+		}
             }
         }
 
@@ -59,11 +68,8 @@ pipeline {
                     )]) {
                         sh """
                             echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
-
-                            docker push ${DOCKER_IMAGE}:${env.BUILD_NUMBER}
-
-                            docker tag ${DOCKER_IMAGE}:${env.BUILD_NUMBER} ${DOCKER_IMAGE}:latest
-                            docker push ${DOCKER_IMAGE}:latest
+                            docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
+			    
                         """
                     }
                 }
@@ -72,24 +78,15 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                sh 'docker-compose down'
-                sh 'docker-compose up -d'
-            }
+		dir('Chatbot-UI') {
+                    sh 'docker-compose -f docker/docker-compose.yml down'
+                    sh 'docker-compose -f docker/docker-compose.yml up -d'
+                }
+	    }
         }
-
-        // Kubernetes stages commented
     }
 
     post {
-        always {
-            echo 'Cleaning up...'
-            script {
-                sh '''
-                    docker rmi ${DOCKER_IMAGE}:${BUILD_NUMBER} || true
-                    docker rmi ${DOCKER_IMAGE}:latest || true
-                '''
-            }
-        }
         success {
             echo 'Pipeline completed successfully!'
         }
