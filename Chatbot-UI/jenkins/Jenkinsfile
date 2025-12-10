@@ -23,10 +23,8 @@ pipeline {
                         npm --version
 
                         # Install dependencies
-                        npm install --legacy-peer-deps
+                        npm ci --legacy-peer-deps
                         
-                        # Fix remark-math issue
-                        npm install remark-math@latest rehype-mathjax@latest remark-gfm@latest --save
                     '''
                 }
             }
