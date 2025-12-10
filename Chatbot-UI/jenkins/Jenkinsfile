@@ -14,7 +14,6 @@ pipeline {
             }
         }
 
-	/*
 	stage('Clean & Fix Permissions') {
             steps {
                 dir('Chatbot-UI') {
@@ -54,7 +53,6 @@ pipeline {
                 }
             }
         }
-	*/
 
         stage('Docker Build') {
             steps {
