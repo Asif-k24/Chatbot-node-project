@@ -14,35 +14,13 @@ pipeline {
             }
         }
 
-        stage('Clean Install Dependencies') {
-            steps {
-                dir('Chatbot-UI') {
-                    sh '''
-                        # Remove everything and do a clean install
-                        rm -rf node_modules package-lock.json
-                        
-                        # Clear npm cache
-                        npm cache clean --force
-                        
-                        # Install all dependencies at once (don't install packages separately)
-                        npm ci --legacy-peer-deps || npm install --legacy-peer-deps
-                    '''
-                }
-            }
-        }
-
         stage('Build Node App') {
             steps {
                 dir('Chatbot-UI') {
                     sh '''
-                        # Update next.config.js to ignore TypeScript and ESLint errors
-                        if [ -f "next.config.js" ]; then
-                            echo "Updating next.config.js to ignore errors..."
-                            sed -i '/reactStrictMode: true,/a\\  typescript: {\\n    ignoreBuildErrors: true,\\n  },\\n  eslint: {\\n    ignoreDuringBuilds: true,\\n  },' next.config.js
-                        fi
-                        
-                        # Build with error ignoring
-                        npm run build
+                        # Clean and build using npx (it will handle dependencies)
+                        rm -rf .next
+                        npx next build
                     '''
                 }
             }
@@ -84,15 +62,6 @@ pipeline {
                     '''
                 }
             }
-        }
-    }
-
-    post {
-        success {
-            echo 'Pipeline completed successfully!'
-        }
-        failure {
-            echo 'Pipeline failed!'
         }
     }
 }
