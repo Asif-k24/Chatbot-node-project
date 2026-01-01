@@ -42,18 +42,6 @@ pipeline {
             }
         }
 
-        stage('Build Node App') {
-            steps {
-                dir('Chatbot-UI') {
-                    sh '''
-                        # Clean and build using npx (it will handle dependencies)
-                        rm -rf .next
-                        npx next build
-                    '''
-                }
-            }
-        }
-
         stage('Docker Build') {
             steps {
                 dir('Chatbot-UI') {
